@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавление спортсмена</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/add_athlete.css') }}">
+</head>
+<body>
+    <div class="container">
+        <form method="POST">
+            <label for="group_id">Группа:</label>
+            <select id="group_id" name="group_id" required>
+                {% for group in groups %}
+                <option value="{{ group[0] }}">{{ group[1] }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="surname">Фамилия:</label>
+            <input type="text" id="surname" name="surname" required>
+
+            <label for="name">Имя:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="patronymic">Отчество:</label>
+            <input type="text" id="patronymic" name="patronymic">
+
+            <label for="username">Имя пользователя:</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Добавить спортсмена</button>
+        </form>
+
+        <form action="{{ url_for('index') }}" method="GET">
+            <button type="submit" class="back-button">Вернуться на главную</button>
+        </form>
+    </div>
+</body>
+</html>
