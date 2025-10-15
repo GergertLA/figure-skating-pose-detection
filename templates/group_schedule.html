@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Недельное расписание</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <style>
+        :root {
+          --timeHeight: 100px; /* Высота одного часа (60 минут) */
+          --calBgColor: #f5f5f5;
+          --eventBorderColor: #e0e0e0;
+          --eventColor1: #d4edff;
+          --eventColor2: #ffe8d4;
+          --eventColor3: #d4f7e2;
+          --eventColor4: #f8d7da;
+          --timeMarkerColor: #e0e0e0;
+          --eventMargin: 2px;
+        }
+        .event[style*="display: none"] {
+            display: none !important;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1800px;
+            min-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            min-width: 200px;
+        }
+
+        .week-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .week-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            grid-template-rows: auto repeat(13, var(--timeHeight));
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            max-height: calc(15 * var(--timeHeight)); /* 13 часов с 7:00 до 20:00 */
+            
+        }
+
+        .time-header {
+            grid-column: 1;
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+            position: sticky;
+            left: 0;
+            z-index: 3;
+        }
+
+        .day-header {
+            padding: 10px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 3;
+        }
+
+        .time-slot {
+            height: var(--timeHeight);
+            display: flex;
+            align-items: flex-start;
+            padding: 5px 10px;
+            border-right: 1px solid #ddd;
+            border-bottom: 1px solid var(--timeMarkerColor);
+            background-color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        .day-column {
+            position: relative;
+            border-right: 1px solid #ddd;
+        }
+
+        .day-column:last-child {
+            border-right: none;
+        }
+
+        .hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--timeMarkerColor);
+            z-index: 0;
+        }
+
+        .event {
+            position: absolute;
+            left: var(--eventMargin);
+            right: var(--eventMargin);
+            border: 1px solid var(--eventBorderColor);
+            border-radius: 5px;
+            padding: 8px;
+            background: white;
+            font-size: 0.9rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        .event:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .event.compact {
+            width: calc(50% - var(--eventMargin) * 2);
+        }
+
+        .event.compact:nth-child(odd) {
+            left: var(--eventMargin);
+        }
+
+        .event.compact:nth-child(even) {
+            left: calc(50% + var(--eventMargin));
+        }
+
+        .event-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .event-time {
+            color: #555;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+
+        .event-coach {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: auto;
+        }
+
+        /* Цвета для событий */
+        .group.ice {
+            /* background-color: var(--eventColor1); */
+            border-left: 4px solid #007bff;
+        }
+
+        .group.hall {
+            /* background-color: var(--eventColor2); */
+            border-left: 4px solid #fd7e14;
+        }
+
+        .individual.ice {
+            /* background-color: var(--eventColor3); */
+            border-left: 4px solid #28a745;
+        }
+
+        .individual.hall {
+            /* background-color: var(--eventColor4); */
+            border-left: 4px solid #dc3545;
+        }
+        .group {
+            /* background-color: var(--eventColor1); */
+            border-left: 4px solid #007bff;
+        }
+
+        .individual {
+            /* background-color: var(--eventColor3); */
+            border-left: 4px solid #28a745;
+        } 
+        /* Стили для подсказки */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 300px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .tooltip-content {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .event-location {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 3px;
+            font-style: italic;
+        }
+        .attendance-table {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .attendance-table thead th {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .form-switch .form-check-input {
+            cursor: pointer;
+        }
+
+        .form-select:disabled {
+            background-color: #e9ecef;
+            opacity: 1;
+            cursor: not-allowed;
+        }
+
+        .group-header {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+
+        .group-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #343a40;
+        }
+
+        .group-header p {
+            margin: 5px 0 0;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        /* Стили для уведомлений */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            min-width: 300px;
+            animation: slideIn 0.5s forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Расписание тренировок</h1>
+            <div>
+                <!-- <button class="add-button btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTrainingModal">+ Новое занятие</button> -->
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Назад</a>
+            </div>
+        </div>
+        <!-- Заголовок с названием группы -->
+        {% if is_group_view %}
+        <div class="group-header">
+            <h2>Расписание группы: {{ group_name }}</h2>
+            <p>Тренер: {{ coach_name }}</p>
+        </div>
+        {% endif %}
+        <!-- Фильтры -->
+        <div class="filters">
+                       
+            <div class="filter-group">
+                <label for="location-filter" class="form-label">Место</label>
+                <select id="location-filter" class="form-select">
+                    <option value="">Все места</option>
+                    <option value="ice">Лед</option>
+                    <option value="hall">Зал</option> 
+                </select>
+            </div>
+        </div>
+        
+        <!-- Навигация по неделям -->
+        <div class="week-navigation">
+            <button class="nav-button btn btn-outline-secondary" id="prev-week">←</button>
+            <div class="week-title" id="week-range"></div>
+            <button class="nav-button btn btn-outline-secondary" id="next-week">→</button>
+        </div>
+        
+        <!-- Календарь -->
+        <div class="calendar-grid" id="calendar">
+            <!-- Временная шкала и дни будут добавлены через JavaScript -->
+        </div>
+        
+    <!-- модальное окно для редактирования тренировки -->
+    <div class="modal fade" id="editTrainingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Редактировать тренировку</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editTrainingForm">
+                        <input type="hidden" id="editTrainingId">
+                        <div class="mb-3">
+                            <label for="editTrainingType" class="form-label">Тип тренировки</label>
+                            <select class="form-select" id="editTrainingType" required>
+                                <option value="group">Групповая</option>
+                                <option value="individual">Индивидуальная</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="editGroupContainer">
+                            <label for="editGroup" class="form-label">Группа</label>
+                            <select class="form-select" id="editGroup">
+                                <option value="">Выберите группу</option>
+                                {% for group in all_groups|sort(attribute='1') %}
+                                <option value="{{ group[0] }}">{{ group[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3" id="editAthleteContainer" style="display: none;">
+                            <label for="editAthlete" class="form-label">Спортсмен</label>
+                            <select class="form-select" id="editAthlete">
+                                <option value="">Выберите спортсмена</option>
+                                {% for athlete in all_athletes %}
+                                <option value="{{ athlete[0] }}">{{ athlete[1] }} {{ athlete[2] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCoach" class="form-label">Тренер</label>
+                            <select class="form-select" id="editCoach" required>
+                                {% for coach in coaches %}
+                                <option value="{{ coach[0] }}">{{ coach[1] }} {{ coach[2] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editLocation" class="form-label">Место</label>
+                            <select class="form-select" id="editLocation" required>
+                                <option value="лед">Лед</option>
+                                <option value="зал">Зал</option>
+                                <option value="другое">Другое</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDate" class="form-label">Дата</label>
+                            <input type="date" class="form-control" id="editDate" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editStartTime" class="form-label">Время начала</label>
+                                <input type="time" class="form-control" id="editStartTime" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editEndTime" class="form-label">Время окончания</label>
+                                <input type="time" class="form-control" id="editEndTime" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-danger me-auto" onclick="deleteTraining()">Удалить</button>
+                            <button id="toggleAttendanceBtn" type="button" class="btn btn-dark">Отметить посещаемость</button>
+                            <button id="saveAttendanceBtn" type="button" class="btn btn-success d-none" onclick="saveAttendanceInline()">Сохранить посещаемость</button>
+                            <!-- <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button> -->
+                            <button type="submit" form="editTrainingForm" class="btn btn-primary">Сохранить</button>
+                        </div>
+                    </form>
+                    <div id="attendanceSection" class="attendance-table mt-3 d-none">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>ФИО</th>
+                                    <th>Был</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBody"></tbody>
+                        </table>
+                    
+                        <div class="d-flex gap-2 mt-3">
+                            <button id="saveAttendanceBtn" type="button" class="btn btn-success" onclick="saveAttendanceInline()">Сохранить посещаемость</button>
+                            <button id="closeAttendanceBtn" type="button" class="btn btn-secondary" onclick="hideAttendance()">Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- модальное окно для добавления тренировки -->
+    <div class="modal fade" id="addTrainingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить новое занятие</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTrainingForm" onsubmit="event.preventDefault(); addNewTraining();">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="trainingType" class="form-label">Тип занятия</label>
+                                <select class="form-select" id="trainingType" required>
+                                    <option value="">Выберите тип</option>
+                                    <option value="group">Групповое</option>
+                                    <option value="individual">Индивидуальное</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="trainingLocation" class="form-label">Место</label>
+                                <select class="form-select" id="trainingLocation" required>
+                                    <option value="">Выберите место</option>
+                                    <option value="лед">Лед</option>
+                                    <option value="зал">Зал</option>
+                                    <option value="другое">Другое</option>
+                                </select>
+                            </div>
+                        </div>
+    
+                        <div class="row">
+                            <div class="col-md-6 mb-3" id="groupSelectContainer">
+                                <label for="trainingGroup" class="form-label">Группа</label>
+                                <select class="form-select" id="trainingGroup">
+                                    <option value="">Выберите группу</option>
+                                    {% for group in all_groups|sort(attribute='1') %}
+                                    <option value="{{ group[0] }}">{{ group[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3" id="athleteSelectContainer" style="display: none;">
+                                <label for="trainingAthlete" class="form-label">Спортсмен</label>
+                                <select class="form-select" id="trainingAthlete">
+                                    <option value="">Выберите спортсмена</option>
+                                    {% for athlete in all_athletes %}
+                                    <option value="{{ athlete[0] }}">{{ athlete[1] }} {{ athlete[2] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+    
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="trainingCoach" class="form-label">Тренер</label>
+                                <select class="form-select" id="trainingCoach" required>
+                                    <option value="">Выберите тренера</option>
+                                    {% for coach in coaches %}
+                                    <option value="{{ coach[0] }}">{{ coach[1] }} {{ coach[2] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="trainingDate" class="form-label">Дата</label>
+                                <input type="date" class="form-control" id="trainingDate" required>
+                            </div>
+                        </div>
+    
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="startTime" class="form-label">Время начала</label>
+                                <input type="time" class="form-control" id="startTime" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="endTime" class="form-label">Время окончания</label>
+                                <input type="time" class="form-control" id="endTime" required>
+                            </div>
+                        </div>
+    
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Добавить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const templateDaysData = JSON.parse('{{ days | tojson | safe }}');
+        const is_group_view = {{ 'true' if is_group_view else 'false' }};
+        const group_id = {{ group_id if is_group_view else 'null' }};
+        const groupColors = {};
+        let groupColorIndex = 0;
+        const predefinedColors = [
+            '#FFB6C1', '#87CEFA', '#98FB98', '#FFD700', '#FFA07A', '#BA55D3', '#00CED1',
+            '#F08080', '#8FBC8F', '#DAA520', '#40E0D0', '#FF69B4', '#CD5C5C', '#7B68EE',
+            '#00FA9A', '#D2691E', '#00BFFF', '#FF8C00', '#DC143C', '#ADFF2F'
+        ];
+        fetch('/check-auth')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    window.location.href = '/auth/login';
+                }
+            });
+        const athleteGroups = JSON.parse('{{ athlete_groups_json | safe }}');
+        
+        // let selectedAthleteId = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем текущую дату
+            let currentDate = new Date();
+            
+            // Функция для обновления отображаемого диапазона недели
+            function updateWeekRange() {
+                const startOfWeek = new Date(currentDate);
+                startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + (currentDate.getDay() === 0 ? -6 : 1));
+                
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                
+                const options = { day: 'numeric', month: 'long' };
+                document.getElementById('week-range').textContent = 
+                    `${startOfWeek.toLocaleDateString('ru-RU', options)} - ${endOfWeek.toLocaleDateString('ru-RU', options)}`;
+                
+                return { start: startOfWeek, end: endOfWeek };
+            }
+                    
+            // Функция для получения короткого названия дня недели
+            function getShortDayName(date) {
+                const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                return days[date.getDay()];
+            }
+            
+            // Функция для создания структуры календаря
+            function createCalendarStructure(startDate, endDate) {
+                const calendar = document.getElementById('calendar');
+                calendar.innerHTML = '';
+                
+                // Добавляем заголовок временной шкалы
+                const timeHeader = document.createElement('div');
+                timeHeader.className = 'time-header day-header';
+                timeHeader.textContent = 'Время';
+                calendar.appendChild(timeHeader);
+                
+                // Добавляем заголовки дней недели
+                const currentDay = new Date(startDate);
+                let dayIndex = 0;
+                while (currentDay <= endDate) {
+                    const dayNum = currentDay.getDate();
+                    const dayName = getShortDayName(currentDay);
+                    
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'day-header';
+                    dayHeader.innerHTML = `
+                        <div class="date-num">${dayNum}</div>
+                        <div class="date-day">${dayName}</div>
+                    `;
+                    dayHeader.dataset.date = formatDate(currentDay);
+                    calendar.appendChild(dayHeader);
+                    
+                    currentDay.setDate(currentDay.getDate() + 1);
+                    dayIndex++;
+                }
+                
+                // Добавляем временные слоты и колонки дней
+                for (let hour = 7; hour <= 20; hour++) {
+                    // Временной слот
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = `${hour}:00`;
+                    calendar.appendChild(timeSlot);
+                    
+                    // Колонки дней
+                    const currentDay = new Date(startDate);
+                    for (let i = 0; i < 7; i++) {
+                        const dayColumn = document.createElement('div');
+                        dayColumn.className = 'day-column empty-cell';
+                        dayColumn.dataset.date = formatDate(currentDay);
+                        dayColumn.dataset.hour = hour;
+                        calendar.appendChild(dayColumn);
+                        
+                        // Добавляем линию часа
+                        const hourLine = document.createElement('div');
+                        hourLine.className = 'hour-line';
+                        hourLine.style.top = '0';
+                        dayColumn.appendChild(hourLine);
+                        
+                        currentDay.setDate(currentDay.getDate() + 1);
+                    }
+                }
+            }
+            
+            // Функция для загрузки данных недели
+            function loadWeekData(startDate, endDate) {
+                const startStr = formatDate(startDate);
+                const endStr = formatDate(endDate);
+                
+                // Показываем данные из шаблона сразу
+                if (templateDaysData && Object.keys(templateDaysData).length > 0) {
+                    renderWeek(templateDaysData);
+                }
+                
+                // Затем пытаемся загрузить свежие данные с сервера
+                fetch(`/schedule/week-data?start=${startStr}&end=${endStr}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.days && Object.keys(data.days).length > 0) {
+                            renderWeek(data.days);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching schedule:', error);
+                        // Если нет данных из шаблона, показываем сообщение
+                        if (!templateDaysData || Object.keys(templateDaysData).length === 0) {
+                            alert('Не удалось загрузить расписание');
+                        }
+                    });
+            }
+
+            
+            // Функция для расчета позиции события в пикселях
+            function calculateEventPosition(startTime, endTime) {
+                // Получаем значение --timeHeight из CSS
+                const timeHeight = parseInt(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--timeHeight').trim()) || 60; // 60 как значение по умолчанию
+
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+                
+                // Вычисляем начальную позицию (в пикселях от верха)
+                const startPosition = (startHour - 7) * timeHeight + 
+                                    (startMinute / 60) * timeHeight;
+                
+                // Вычисляем высоту события (в пикселях)
+                const durationMinutes = (endHour - startHour) * 60 + 
+                                    (endMinute - startMinute);
+                const height = (durationMinutes / 60) * timeHeight;
+                
+                return {
+                    top: startPosition,
+                    height: height
+                };
+            }
+            
+            // Функция для проверки пересечения событий
+            function hasOverlap(event1, event2) {
+                return event1.top < event2.top + event2.height && 
+                       event1.top + event1.height > event2.top;
+            }
+            
+            // Функция для преобразования значения места
+            function getLocationDisplayName(location) {
+                const locationNames = {
+                    'hall': 'Зал',
+                    'ice': 'Лед',
+                    'other': 'Другое'
+                };
+                return locationNames[location] || location;
+            }
+            
+            // Функция для получения значения для фильтрации
+            function getLocationFilterValue(location) {
+                const mapping = {
+                    'hall': 'зал',
+                    'ice': 'лед',
+                    'зал': 'зал', 
+                    'лед': 'лед'
+                };
+                return mapping[location] || location;
+            }
+            
+            function lightenColor(hex, percent) {
+                const num = parseInt(hex.slice(1), 16);
+                const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
+                const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
+                const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Функция для генерации цвета на основе строки (названия группы)
+            function getGroupColor(groupName, location) {
+                if (!groupName) return '#ccc';
+                if (!groupColors[groupName]) {
+                    groupColors[groupName] = predefinedColors[groupColorIndex % predefinedColors.length];
+                    groupColorIndex++;
+                }
+                const base = groupColors[groupName];
+                if (location === 'hall' || location === 'зал') return lightenColor(base, 0.5);  // осветлим на 50%
+                return base;
+            }
+            
+            // Функция для отрисовки событий
+            function renderWeek(daysData) {
+                // Сначала создаем структуру календаря
+                const weekRange = updateWeekRange();
+                createCalendarStructure(weekRange.start, weekRange.end);
+                
+                if (!daysData || Object.keys(daysData).length === 0) {
+                    console.log('Нет данных для отображения');
+                    return;
+                }
+
+                // Затем добавляем события
+                for (const [date, events] of Object.entries(daysData)) {
+                    // Находим соответствующий день
+                    const dayColumns = document.querySelectorAll(`.day-column[data-date="${date}"]`);
+                    if (dayColumns.length === 0) continue;
+                    
+                    const dayColumn = dayColumns[0];
+                    const existingEvents = [];
+                    
+                    for (const event of events) {
+                        const position = calculateEventPosition(event.start_time, event.end_time);
+                        const isGroup = event.type === 'group';
+                        
+                        const eventElement = document.createElement('div');
+                        eventElement.className = `event ${isGroup ? 'group' : 'individual'} ${event.location || ''}`;
+                        eventElement.style.top = `${position.top}px`;
+                        eventElement.style.height = `${position.height}px`;
+                        eventElement.dataset.id = event.id;
+                        eventElement.dataset.type = event.type;
+                        
+                        const color = getGroupColor(event.group || event.athlete || 'default', event.location);
+                        eventElement.style.backgroundColor = color;
+                        eventElement.style.borderLeft = `4px solid ${color}`;
+
+                        eventElement.innerHTML = `
+                            <div class="event-title">${isGroup ? event.group : event.athlete}</div>
+                            <div class="event-location">${getLocationDisplayName(event.location)}</div>
+                            <div class="event-coach">Тренер: ${event.coach}</div>
+                        `;
+
+                        // Добавляем атрибуты для фильтрации
+                        eventElement.dataset.coach = event.coach ? event.coach.split(' ')[0] : '';
+                        eventElement.dataset.location = event.location.toLowerCase();
+                        eventElement.dataset.group = event.group || '';
+                        eventElement.dataset.athlete = event.athlete || '';
+                        
+                        // Для индивидуальных тренировок добавляем информацию о группе спортсмена
+                        if (event.type === 'individual' && event.athlete_id) {
+                                eventElement.dataset.athleteId = event.athlete_id;
+                            }
+                        if (event.type === 'group' && event.group_id) {
+                                eventElement.dataset.groupId = event.group_id;
+                            }
+
+                        // Проверяем пересечения с уже добавленными событиями
+                        let hasOverlapWithExisting = false;
+                        for (const existingEvent of existingEvents) {
+                            if (hasOverlap(position, existingEvent.position)) {
+                                hasOverlapWithExisting = true;
+                                break;
+                            }
+                        }
+                        
+                        if (hasOverlapWithExisting) {
+                            eventElement.classList.add('compact');
+                        }
+                        
+                        // Сохраняем информацию о событии для проверки пересечений
+                        existingEvents.push({
+                            element: eventElement,
+                            position: position
+                        });
+                        
+                        dayColumn.appendChild(eventElement);
+                    }
+                }
+                if (is_group_view) {
+                    document.getElementById('group-filter').value = "{{ group_name }}";
+                }
+                // Применяем фильтры после загрузки
+                applyFilters();
+            }
+            
+            // Функция для применения фильтров
+            function applyFilters() {
+                const locationFilter = document.getElementById('location-filter').value.toLowerCase();
+                
+                document.querySelectorAll('.event').forEach(event => {
+                    const eventLocation = (event.dataset.location || '').toLowerCase();
+                    
+                    // Нормализуем значения для сравнения
+                    const locationMap = {
+                        'лед': 'ice',
+                        'зал': 'hall'
+                    };
+                    const normalizedEventLocation = locationMap[eventLocation] || eventLocation;
+                    
+                    const showLocation = !locationFilter || normalizedEventLocation === locationFilter;
+                    
+                    const showEvent = (event.dataset.groupId == group_id || event.dataset.athlete_group_id == group_id) 
+                                    && showLocation;
+                    event.style.display = showEvent ? 'flex' : 'none';
+                });
+            }
+            
+            // Функция для форматирования даты в YYYY-MM-DD
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Обработчики кнопок навигации
+            document.getElementById('prev-week').addEventListener('click', function() {
+                currentDate.setDate(currentDate.getDate() - 7);
+                const weekRange = updateWeekRange();
+                loadWeekData(weekRange.start, weekRange.end);
+            });
+            
+            document.getElementById('next-week').addEventListener('click', function() {
+                currentDate.setDate(currentDate.getDate() + 7);
+                const weekRange = updateWeekRange();
+                loadWeekData(weekRange.start, weekRange.end);
+            });
+            
+            // Обработчики фильтров
+            document.getElementById('location-filter').addEventListener('change', applyFilters);
+            
+            // Обработчик клика на событие
+            document.addEventListener('click', function(e) {
+                const eventElement = e.target.closest('.event');
+                if (eventElement) {
+                    e.preventDefault();
+                    selectedEventId = eventElement.dataset.id; // Сохраняем ID выбранного события
+                    const eventType = eventElement.dataset.type;
+                    
+                    // Загружаем данные о тренировке
+                    fetch(`/schedule/${selectedEventId}/details`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                alert(data.error);
+                                return;
+                            }
+                            
+                            // Заполняем форму редактирования
+                            document.getElementById('editTrainingId').value = selectedEventId;
+                            document.getElementById('editTrainingType').value = eventType;
+                            document.getElementById('editCoach').value = data.coach_id;
+                            document.getElementById('editLocation').value = data.location;
+                            document.getElementById('editDate').value = data.training_date;
+                            document.getElementById('editStartTime').value = data.start_time;
+                            document.getElementById('editEndTime').value = data.end_time;
+                            
+                            // Показываем соответствующие поля для типа тренировки
+                            if (eventType === 'group') {
+                                document.getElementById('editGroupContainer').style.display = 'block';
+                                document.getElementById('editAthleteContainer').style.display = 'none';
+                                document.getElementById('editGroup').value = data.group_id || '';
+                            } else {
+                                document.getElementById('editGroupContainer').style.display = 'none';
+                                document.getElementById('editAthleteContainer').style.display = 'block';
+                                document.getElementById('editAthlete').value = data.athlete_id || '';
+                            }
+                            
+                            // Показываем модальное окно
+                            new bootstrap.Modal(document.getElementById('editTrainingModal')).show();
+                        })
+                        .catch(error => {
+                            console.error('Ошибка:', error);
+                            alert('Не удалось загрузить данные о тренировке');
+                        });
+                }
+            });
+            // Обработчик изменения типа тренировки
+            document.getElementById('editTrainingType').addEventListener('change', function() {
+                const isGroup = this.value === 'group';
+                document.getElementById('editGroupContainer').style.display = isGroup ? 'block' : 'none';
+                document.getElementById('editAthleteContainer').style.display = isGroup ? 'none' : 'block';
+            });
+
+            // Обработчик отправки формы редактирования
+            document.getElementById('editTrainingForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    id: document.getElementById('editTrainingId').value,
+                    training_type: document.getElementById('editTrainingType').value,
+                    coach_id: document.getElementById('editCoach').value,
+                    location: document.getElementById('editLocation').value,
+                    training_date: document.getElementById('editDate').value,
+                    start_time: document.getElementById('editStartTime').value,
+                    end_time: document.getElementById('editEndTime').value,
+                    group_id: document.getElementById('editTrainingType').value === 'group' ? 
+                            document.getElementById('editGroup').value : null,
+                    athlete_id: document.getElementById('editTrainingType').value === 'individual' ? 
+                            document.getElementById('editAthlete').value : null
+                };
+                
+                // Отправляем данные на сервер
+                fetch('/schedule/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        bootstrap.Modal.getInstance(document.getElementById('editTrainingModal')).hide();
+                        location.reload(); // Перезагружаем страницу для обновления данных
+                    } else {
+                        alert(data.message || 'Ошибка при сохранении изменений');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Не удалось сохранить изменения');
+                });
+                saveAttendance(trainingId).then(() => {
+                    alert('Сохранено!');
+                    location.reload();
+                });
+            });
+            
+            // Обработчик изменения типа тренировки
+            document.getElementById('trainingType').addEventListener('change', function() {
+                const isGroup = this.value === 'group';
+                document.getElementById('groupSelectContainer').style.display = isGroup ? 'block' : 'none';
+                document.getElementById('athleteSelectContainer').style.display = isGroup ? 'none' : 'block';
+            });
+            // Обработчик отправки формы
+            document.getElementById('addTrainingForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    training_type: document.getElementById('trainingType').value,
+                    location: document.getElementById('trainingLocation').value,
+                    coach_id: document.getElementById('trainingCoach').value,
+                    training_date: document.getElementById('trainingDate').value,
+                    start_time: document.getElementById('startTime').value,
+                    end_time: document.getElementById('endTime').value,
+                    group_id: document.getElementById('trainingType').value === 'group' ? 
+                            document.getElementById('trainingGroup').value : null,
+                    athlete_id: document.getElementById('trainingType').value === 'individual' ? 
+                            document.getElementById('trainingAthlete').value : null
+                };
+                
+                // Валидация
+                if (!formData.training_type || !formData.location || !formData.coach_id || 
+                    !formData.training_date || !formData.start_time || !formData.end_time) {
+                    alert('Заполните все обязательные поля');
+                    return;
+                }
+                
+                if (formData.training_type === 'group' && !formData.group_id) {
+                    alert('Выберите группу');
+                    return;
+                }
+                
+                if (formData.training_type === 'individual' && !formData.athlete_id) {
+                    alert('Выберите спортсмена');
+                    return;
+                }
+                
+                // Отправка данных
+                fetch('/schedule/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        bootstrap.Modal.getInstance(document.getElementById('addTrainingModal')).hide();
+                        location.reload(); // Перезагружаем страницу для обновления расписания
+                    } else {
+                        alert(data.message || 'Ошибка при добавлении занятия');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Не удалось добавить занятие');
+                });
+            });
+            function addNewTraining() {
+                const formData = {
+                    training_type: document.getElementById('trainingType').value,
+                    location: document.getElementById('trainingLocation').value,
+                    coach_id: document.getElementById('trainingCoach').value,
+                    training_date: document.getElementById('trainingDate').value,
+                    start_time: document.getElementById('startTime').value,
+                    end_time: document.getElementById('endTime').value,
+                    group_id: document.getElementById('trainingType').value === 'group' ? 
+                            document.getElementById('trainingGroup').value : null,
+                    athlete_id: document.getElementById('trainingType').value === 'individual' ? 
+                            document.getElementById('trainingAthlete').value : null
+                };
+                
+                // Валидация
+                if (!formData.training_type || !formData.location || !formData.coach_id || 
+                    !formData.training_date || !formData.start_time || !formData.end_time) {
+                    alert('Заполните все обязательные поля');
+                    return;
+                }
+                
+                if (formData.training_type === 'group' && !formData.group_id) {
+                    alert('Выберите группу');
+                    return;
+                }
+                
+                if (formData.training_type === 'individual' && !formData.athlete_id) {
+                    alert('Выберите спортсмена');
+                    return;
+                }
+                
+                // Отправка данных
+                fetch('/schedule/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        bootstrap.Modal.getInstance(document.getElementById('addTrainingModal')).hide();
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Ошибка при добавлении занятия');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Не удалось добавить занятие');
+                });
+            }
+            
+            
+
+
+            function showCoachForm() {
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                new bootstrap.Modal(document.getElementById('coachModal')).show();
+            }
+
+            function showLocationForm() {
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                new bootstrap.Modal(document.getElementById('locationModal')).show();
+            }
+
+            function showEditForm() {
+                window.location.href = `/schedule/edit/${selectedEventId}`;
+            }
+
+            async function showAttendanceForm() {
+                try {
+                    // Закрываем предыдущее модальное окно
+                    bootstrap.Modal.getInstance(document.getElementById('actionModal'))?.hide();
+                    
+                    // Показываем индикатор загрузки
+                    const attendanceList = document.getElementById('attendanceList');
+                    attendanceList.innerHTML = `
+                        <tr>
+                            <td colspan="2" class="text-center">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </td>
+                        </tr>
+                    `;
+
+                    // Загружаем данные
+                    const response = await fetch(`/schedule/${selectedEventId}/attendance-info`);
+                    if (!response.ok) throw new Error('Ошибка загрузки данных');
+                    
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+
+                    // Обновляем содержимое
+                    document.getElementById('attendanceGroupInfo').textContent = `Группа: ${data.group_name}`;
+                    document.getElementById('attendanceDateInfo').textContent = `Дата: ${data.training_date}`;
+                    
+                    attendanceList.innerHTML = data.athletes.map(athlete => `
+                        <tr>
+                            <td>${athlete.name}</td>
+                            <td class="text-center">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" 
+                                        type="checkbox" 
+                                        ${athlete.attended ? 'checked' : ''}
+                                        style="width: 3em; height: 1.5em;">
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    // Показываем модальное окно
+                    new bootstrap.Modal(document.getElementById('attendanceModal')).show();
+
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    attendanceList.innerHTML = `
+                        <tr>
+                            <td colspan="2" class="text-center text-danger">
+                                ${error.message}
+                            </td>
+                        </tr>
+                    `;
+                    new bootstrap.Modal(document.getElementById('attendanceModal')).show();
+                }
+            }
+
+            function updateCoach() {
+                const newCoachId = document.getElementById('newCoachSelect').value;
+                
+                fetch(`/schedule/update-coach/${selectedEventId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_coach_id: newCoachId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                });
+            }
+
+            function updateLocation() {
+                const newLocation = document.getElementById('newLocationSelect').value;
+                
+                fetch(`/schedule/update-location/${selectedEventId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_location: newLocation })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
+                });
+            }
+
+            function saveAttendance() {
+                const checkboxes = document.querySelectorAll('#attendanceList input[type="checkbox"]');
+                const attendanceData = Array.from(checkboxes).map(checkbox => ({
+                    athlete_id: checkbox.dataset.athleteId,
+                    attended: checkbox.checked
+                }));
+                
+                // Показываем индикатор загрузки
+                const saveBtn = document.querySelector('#attendanceModal .btn-primary');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+                
+                // Отправляем данные на сервер
+                fetch(`/schedule/${selectedEventId}/attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ attendance: attendanceData })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Закрываем модальное окно
+                        bootstrap.Modal.getInstance(document.getElementById('attendanceModal')).hide();
+                        // Показываем уведомление об успехе
+                        showAlert('Посещаемость сохранена', 'success');
+                    } else {
+                        throw new Error(data.message || 'Ошибка сохранения');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    showAlert(error.message, 'danger');
+                })
+                .finally(() => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Сохранить';
+                });
+            }
+
+            function showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.setAttribute('role', 'alert');
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                const container = document.querySelector('.container');
+                container.insertBefore(alertDiv, container.firstChild);
+                
+                // Автоматическое закрытие через 5 секунд
+                setTimeout(() => {
+                    bootstrap.Alert.getInstance(alertDiv)?.close();
+                }, 5000);
+            }
+
+            function showEditForm() {
+                window.location.href = `/schedule/edit/${selectedEventId}`;
+            }
+            // Инициализация
+            const weekRange = updateWeekRange();
+            loadWeekData(weekRange.start, weekRange.end);
+        });
+        function deleteTraining() {
+            const trainingId = document.getElementById('editTrainingId').value;
+            if (!trainingId) {
+                alert("ID тренировки не найден.");
+                return;
+            }
+
+            if (confirm("Вы уверены, что хотите удалить эту тренировку?")) {
+                fetch(`/delete_training/${trainingId}`, {
+                    method: 'POST'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Тренировка успешно удалена.");
+                        // Перезагрузим страницу или заново загрузим расписание
+                        location.reload();
+                    } else {
+                        alert("Ошибка при удалении тренировки.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при удалении:', error);
+                    alert("Произошла ошибка.");
+                });
+            }
+        }
+        let attendanceVisible = false;
+
+        function toggleAttendance() {
+            const trainingId = document.getElementById('editTrainingId').value;
+            if (!trainingId) {
+                alert("ID тренировки не найден.");
+                return;
+            }
+
+            const section = document.getElementById('attendanceSection');
+            const saveBtn = document.getElementById('saveAttendanceBtn');
+
+            if (!attendanceVisible) {
+                fetch(`/attendance/${trainingId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const tbody = document.getElementById('attendanceTableBody');
+                        tbody.innerHTML = '';
+
+                        data.forEach(({ athlete_id, surname, name, present }) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${surname} ${name}</td>
+                                <td>
+                                    <input type="checkbox" class="form-check-input"
+                                        data-athlete-id="${athlete_id}" ${present ? 'checked' : ''}>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+
+                        section.classList.remove('d-none');
+                        saveBtn.classList.remove('d-none');
+                        attendanceVisible = true;
+                    });
+            } else {
+                section.classList.add('d-none');
+                saveBtn.classList.add('d-none');
+                attendanceVisible = false;
+            }
+        }
+        document.getElementById('toggleAttendanceBtn').addEventListener('click', () => {
+            const trainingId = document.getElementById('editTrainingId').value;
+            if (!trainingId) {
+                alert("ID тренировки не найден.");
+                return;
+            }
+
+            fetch(`/attendance/${trainingId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('attendanceTableBody');
+                    tbody.innerHTML = '';
+
+                    data.forEach(({ athlete_id, surname, name, present }) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${surname} ${name}</td>
+                            <td>
+                                <input type="checkbox" class="form-check-input"
+                                    data-athlete-id="${athlete_id}" ${present ? 'checked' : ''}>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('attendanceSection').classList.remove('d-none');
+                });
+        });
+        function hideAttendance() {
+            document.getElementById('attendanceSection').classList.add('d-none');
+        }
+        function saveAttendanceInline() {
+            const trainingId = document.getElementById('editTrainingId').value;
+            const checkboxes = document.querySelectorAll('#attendanceTableBody input[type="checkbox"]:checked');
+            const present_ids = Array.from(checkboxes).map(cb => parseInt(cb.dataset.athleteId));
+
+            fetch(`/attendance/${trainingId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ present_ids })
+            })
+            .then(res => {
+                if (res.ok) {
+                    alert('Посещаемость сохранена!');
+                    const btn = document.getElementById('toggleAttendanceBtn');
+                    btn.classList.remove('btn-dark');
+                    btn.classList.add('btn-outline-secondary');
+                } else {
+                    alert('Ошибка при сохранении.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Ошибка сети.');
+            });
+        }
+        function checkAttendanceStatus(scheduleId) {
+            fetch(`/attendance/${scheduleId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const btn = document.getElementById('toggleAttendanceBtn');
+                    if (data.length && data.some(a => a.present)) {
+                        btn.classList.remove('btn-dark');
+                        btn.classList.add('btn-outline-secondary');
+                    } else {
+                        btn.classList.remove('btn-outline-secondary');
+                        btn.classList.add('btn-dark');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

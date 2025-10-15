@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Посещаемость группы</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css' rel='stylesheet'>
+    <style>
+        .attendance-container {
+            max-width: 100%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        .week-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .week-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 250px;
+            text-align: center;
+        }
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .attendance-table th {
+            background-color: #244A9A;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        .attendance-table th, .attendance-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .present {
+            color: green;
+            font-weight: bold;
+        }
+        .absent {
+            color: red;
+        }
+        .attendance-toggle {
+            cursor: pointer;
+        }
+    
+        .nav-link {
+            color: white !important;
+            margin-right: 15px;
+        }
+        .logout-link {
+            color: white !important;
+            margin-left: auto;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+        .dropdown-content a {
+            color: black !important;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .content {
+            display: none;
+            padding: 20px;
+        }
+        .content.active {
+            display: block;
+        }
+        .attendance-container h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- <div class="header">
+        <nav class="container d-flex align-items-center">
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="athletes-section">Спортсмены ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('new_video') }}">Добавить видео</a>
+                    <a href="{{ url_for('add_athlete') }}">Добавить спортсмена</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="coaches-section">Тренеры ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('add_coach') }}">Добавить тренера</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="groups-section">Группы ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('add_group') }}">Добавить группу</a>
+                </div>
+            </div>
+            <a href="{{ url_for('auth.logout') }}" class="logout-link">Выйти</a>
+        </nav>
+    </div> -->
+
+    <div class="container">
+        <div class="attendance-container">
+            <h1>Посещаемость группы: {{ group_name }}</h1>
+            
+            <div class="week-navigation">
+                <a href="{{ url_for('group_attendance', group_id=group_id, week_start=prev_week.strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                    ←
+                </a>
+                <span class="week-title">
+                    Неделя {{ week_start.strftime('%d.%m.%Y') }} - {{ week_end.strftime('%d.%m.%Y') }}
+                </span>
+                <a href="{{ url_for('group_attendance', group_id=group_id, week_start=next_week.strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                    →
+                </a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="attendance-table table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Спортсмен</th>
+                            {% for training in trainings %}
+                            <th>
+                                {{ training[1].strftime('%d.%m') }}<br>
+                                {{ training[2].strftime('%H:%M') }}
+                            </th>
+                            {% endfor %}
+                            <th>Посещаемость</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for athlete in athletes %}
+                        {% set attended = attendance_count.get(athlete[0], 0) %}
+                        {% set total_trainings = trainings|length %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ athlete[1] }} {{ athlete[2] }}{% if athlete[3] %} {{ athlete[3] }}{% endif %}</td>
+                            {% for training in trainings %}
+                            <td class="attendance-toggle {% if attendance_data.get((athlete[0], training[0])) %}present{% else %}absent{% endif %}" 
+                                data-athlete-id="{{ athlete[0] }}" 
+                                data-schedule-id="{{ training[0] }}">
+                                {% if attendance_data.get((athlete[0], training[0])) %}✓{% else %}✗{% endif %}
+                            </td>
+                            {% endfor %}
+                            <td>
+                                {{ attended }}/{{ total_trainings }}
+                                ({{ "%.0f"|format(( (attended / total_trainings * 100) if total_trainings > 0 else 0 )) }}%)
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="display: flex; justify-content: center;">
+                <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Назад</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('.attendance-toggle').forEach(cell => {
+            cell.addEventListener('click', async function() {
+                const athleteId = this.dataset.athleteId;
+                const scheduleId = this.dataset.scheduleId;
+                const isPresent = this.classList.contains('present');
+                
+                try {
+                    const response = await fetch('/update_attendance', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            athlete_id: athleteId,
+                            schedule_id: scheduleId,
+                            present: !isPresent
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        this.classList.toggle('present');
+                        this.classList.toggle('absent');
+                        this.innerHTML = isPresent ? '✗' : '✓';
+                        
+                        // Обновляем общую посещаемость
+                        const row = this.parentNode;
+                        const attendanceCell = row.querySelector('td:last-child');
+                        const [current, total] = attendanceCell.textContent.split('/')[0].trim().split('/');
+                        const newCount = isPresent ? parseInt(current) - 1 : parseInt(current) + 1;
+                        const percent = Math.round((newCount / parseInt(total)) * 100);
+                        attendanceCell.innerHTML = `${newCount}/${total} (${percent}%)`;
+                    }
+                } catch (error) {
+                    console.error('Ошибка при обновлении посещаемости:', error);
+                }
+            });
+        });
+
+        // Навигация между разделами
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const section = this.dataset.section;
+                if (section) {
+                    document.querySelectorAll('.content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(section).classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

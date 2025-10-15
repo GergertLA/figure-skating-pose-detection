@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Редактирование тренировки</h2>
+    
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Дата</label>
+            <input type="date" name="training_date" value="{{ training.date }}" class="form-control" required>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col">
+                <label class="form-label">Начало</label>
+                <input type="time" name="start_time" value="{{ training.start_time }}" class="form-control" required>
+            </div>
+            <div class="col">
+                <label class="form-label">Конец</label>
+                <input type="time" name="end_time" value="{{ training.end_time }}" class="form-control" required>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Тип тренировки</label>
+            <select name="training_type" class="form-select" required>
+                <option value="group" {% if training.type == 'group' %}selected{% endif %}>Групповая</option>
+                <option value="individual" {% if training.type == 'individual' %}selected{% endif %}>Индивидуальная</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Место</label>
+            <input type="text" name="location" value="{{ training.location }}" class="form-control" required>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Тренер</label>
+            <select name="coach_id" class="form-select" required>
+                {% for coach in coaches %}
+                <option value="{{ coach[0] }}" {% if coach[0] == training.coach_id %}selected{% endif %}>
+                    {{ coach[1] }} {{ coach[2] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3" id="group-field" {% if training.type == 'individual' %}style="display: none;"{% endif %}>
+            <label class="form-label">Группа</label>
+            <select name="group_id" class="form-select">
+                <option value="">-- Выберите группу --</option>
+                {% for group in groups %}
+                <option value="{{ group[0] }}" {% if group[0] == training.group_id %}selected{% endif %}>
+                    {{ group[1] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3" id="athlete-field" {% if training.type == 'group' %}style="display: none;"{% endif %}>
+            <label class="form-label">Спортсмен</label>
+            <select name="athlete_id" class="form-select">
+                <option value="">-- Выберите спортсмена --</option>
+                {% for athlete in athletes %}
+                <option value="{{ athlete[0] }}" {% if athlete[0] == training.athlete_id %}selected{% endif %}>
+                    {{ athlete[1] }} {{ athlete[2] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        <a href="{{ url_for('week_schedule') }}" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>
+
+<script>
+document.querySelector('select[name="training_type"]').addEventListener('change', function() {
+    const type = this.value;
+    document.getElementById('group-field').style.display = type === 'group' ? 'block' : 'none';
+    document.getElementById('athlete-field').style.display = type === 'individual' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

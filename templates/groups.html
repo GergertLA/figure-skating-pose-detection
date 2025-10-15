@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NeuroSkate_admin</title>
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> -->
+    <script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/locales/ru.min.js'></script>
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.min.js'></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding-top: 70px;
+        }
+
+        .header {
+            background-color: #102D69;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            z-index: 1000;
+            justify-content: space-between;
+        }
+
+        .header nav {
+            display: flex;
+            gap: 30px;
+            margin-right: 30px;
+            align-items: center;
+        }
+
+        .header nav .dropdown:not(:last-child)::after {
+            content: "";
+            border-right: 2px solid #244A9A;
+            margin-left: 15px;
+            height: 20px;
+        }
+
+        .header nav a {
+            color: white !important;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 8px 20px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .dropdown-content {
+            background-color: #244A9A !important;
+            min-width: 200px;
+            padding: 8px 0;
+            border-radius: 4px;
+        }
+
+        .dropdown-content a {
+            padding: 12px 16px;
+            color: white !important;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #102D69 !important;
+        }
+
+        .logout-link {
+            color: white !important;
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: auto;
+            padding: 8px 20px;
+            right: 30px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .logout-link:hover {
+            background-color: #244A9A;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .group-header {
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #e9e9e9;
+        }
+
+        .athlete-item {
+            padding-left: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #244A9A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button a:hover {
+            background-color: #102D69;
+        }
+
+        .coach-info {
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .edit-form {
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .edit-form input {
+            margin: 5px;
+            padding: 8px;
+        }
+
+        .edit-form select {
+            padding: 8px;
+            height: 36px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .action-button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            color: #244A9A;
+            background: none;
+            border: none;
+            font-size: 1.2em;
+        }
+
+        .add-video-btn {
+            background-color: #244A9A;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .action-buttons a {
+            text-decoration: none;
+            color: #244A9A;
+        }
+
+        .action-buttons a:hover {
+            color: #102D69;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .athletes {
+            display: none;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            margin-top: 0px;
+        }
+
+        .search-container input {
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .reassign-form form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 0px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .reassign-form {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .reassign-form select {
+            padding: 8px;
+            margin-right: 10px;
+            min-width: 250px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .reassign-form button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #244A9A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reassign-form button:hover {
+            background-color: #102D69;
+        }
+
+        .coach-table {
+            margin-bottom: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            color: #244A9A;
+        }
+
+        .action-button:hover {
+            color: #102D69;
+        }
+
+        .edit-form {
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .edit-form input {
+            margin: 5px;
+            padding: 8px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .edit-form button {
+            padding: 8px 15px;
+            background-color: #244A9A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .edit-form button:hover {
+            background-color: #102D69;
+        }
+
+        .coach-table {
+            display: block;
+        }
+
+        /* Стили для кнопки расписания */
+        .schedule-button-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .schedule-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #102D69;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .schedule-button:hover {
+            background-color: #244A9A;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        .schedule-button .icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .schedule-button .text {
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <nav>
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="athletes-section">Спортсмены ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('new_video') }}">Добавить видео</a>
+                    <a href="{{ url_for('add_athlete') }}">Добавить спортсмена</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="coaches-section">Тренеры ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('add_coach') }}">Добавить тренера</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="nav-link" data-section="groups-section">Группы ▼</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('add_group') }}">Добавить группу</a>
+                </div>
+            </div>
+        </nav> <!-- Закрываем nav здесь -->
+        <a href="{{ url_for('auth.logout') }}" class="logout-link">Выйти</a>
+    </div>
+    <div class="schedule-button-container">
+        <a href="{{ url_for('week_schedule') }}" class="schedule-button">
+            <span class="icon">📅</span>
+            <span class="text">Расписание</span>
+        </a>
+    </div>
+
+    <!-- Раздел "Спортсмены" -->
+    <div id="athletes-section" class="content active">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Поиск спортсмена" oninput="searchAthlete()">
+        </div>
+        <table>
+            <tbody>
+                {% for group in groups %}
+                <tr class="group-header" data-group-id="{{ group.id }}" onclick="toggleAthletes({{ group.id }})">
+                    <td>{{ group.name }}</td>
+                </tr>
+                <tr id="athletes-{{ group.id }}" class="athletes">
+                    <td colspan="2">
+                        <div class="coach-info">
+                            Тренер: {{ group.coach }}
+                        </div>
+                        <table>
+                            <tbody>
+                                {% for athlete in group.athletes %}
+                                <tr class="athlete-item">
+                                    <td class="athlete-name">{{ athlete[1] }} {{ athlete[2] }} {% if athlete[3] %}{{ athlete[3] }}{% endif %}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <div class="tooltip">
+                                                <button class="action-button" onclick="showEditForm({{ athlete[0] }})">✎</button>
+                                                <span class="tooltiptext">Редактировать спортсмена</span>
+                                            </div>
+                                            <div class="tooltip">
+                                                <a class="action-button" href="{{ url_for('get_athlete_elements', athlete_id=athlete[0]) }}">👁</a>
+                                                <span class="tooltiptext">Просмотреть элементы</span>
+                                            </div>
+                                            <div class="tooltip">
+                                                <a class="action-button" href="{{ url_for('new_video', group_id=group.id, athlete_id=athlete[0]) }}">✚</a>
+                                                <span class="tooltiptext">Добавить видео</span>
+                                            </div>
+                                            <div class="tooltip">
+                                                <button class="action-button" onclick="confirmDelete({{ athlete[0] }})">✖</button>
+                                                <span class="tooltiptext">Удалить спортсмена</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="edit-form" id="edit-form-{{ athlete[0] }}" style="display: none;">
+                                            <form action="{{ url_for('edit_athlete', athlete_id=athlete[0]) }}" method="POST">
+                                                <input type="text" name="surname" value="{{ athlete[1] }}" placeholder="Фамилия" required>
+                                                <input type="text" name="name" value="{{ athlete[2] }}" placeholder="Имя" required>
+                                                <input type="text" name="patronymic" value="{{ athlete[3] if athlete[3] else '' }}" placeholder="Отчество">
+                                                <select name="group_id" style="padding: 8px; height: 36px; margin: 5px;">
+                                                    {% for group in groups %}
+                                                        <option value="{{ group.id }}" 
+                                                            {% if athlete[4] == group.id %}selected{% endif %}>
+                                                            {{ group.name }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button type="submit">Сохранить</button>
+                                                <button type="button" onclick="showEditForm({{ athlete[0] }})">Отмена</button>
+                                            </form>
+                                        </div>
+
+                                        <form id="delete-form-{{ athlete[0] }}" action="{{ url_for('delete_athlete', athlete_id=athlete[0]) }}" method="POST" style="display: none;">
+                                            <input type="hidden" name="_method" value="DELETE">
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Раздел "Тренеры" -->
+    <div id="coaches-section" class="content">
+        <div class="search-container">
+            <input type="text" id="searchCoachInput" placeholder="Поиск тренера" oninput="searchCoach()">
+        </div>
+        {% for coach in coaches %}
+        <div class="coach-table">
+            <table>
+                <thead>
+                    <!-- Строка с ФИО тренера и действиями -->
+                    <tr>
+                        <th>{{ coach.coach_name }}</th>
+                        <th>
+                            <div class="action-buttons">
+                                <div class="tooltip">
+                                    <a class="action-button" href="{{ url_for('view_coach', coach_id=coach.coach_id) }}">👁</a>
+                                    <span class="tooltiptext">Просмотреть профиль</span>
+                                </div>
+                                <div class="tooltip">
+                                    <button class="action-button" onclick="confirmDeleteCoach({{ coach.coach_id }})">✖</button>
+                                    <span class="tooltiptext">Удалить тренера</span>
+                                </div>
+                            </div>
+                            <!-- Форма редактирования тренера -->
+                            <div class="edit-form" id="edit-coach-form-{{ coach.coach_id }}" style="display: none;">
+                                <form action="{{ url_for('edit_coach', coach_id=coach.coach_id) }}" method="POST">
+                                    <label for="surname">Фамилия:</label>
+                                    <input type="text" id="surname" name="surname" value="{{ coach.coach_name.split()[0] }}" placeholder="Фамилия" required>
+                                    
+                                    <label for="name">Имя:</label>
+                                    <input type="text" id="name" name="name" value="{{ coach.coach_name.split()[1] }}" placeholder="Имя" required>
+                                    
+                                    <label for="patronymic">Отчество:</label>
+                                    <input type="text" id="patronymic" name="patronymic" value="{{ coach.coach_name.split()[2] }}" placeholder="Отчество">
+                                    
+                                    <button type="submit">Сохранить</button>
+                                    <button type="button" onclick="hideEditCoachForm({{ coach.coach_id }})">Отмена</button>
+                                </form>
+                            </div>
+                            <!-- Формы для переноса групп (скрыты по умолчанию) -->
+                            <div id="reassign-forms-{{ coach.coach_id }}" style="display: none;">
+                                {% for group in coach.groups %}
+                                    <div class="reassign-form" data-group-id="{{ group.group_id }}">
+                                        <p>Группа: {{ group.group_name }}</p>
+                                        <select class="new-coach-select" required>
+                                            <option value="">Выберите нового тренера</option>
+                                            {% for other_coach in coaches %}
+                                                {% if other_coach.coach_id != coach.coach_id %}
+                                                    <option value="{{ other_coach.coach_id }}">{{ other_coach.coach_name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endfor %}
+                                <button onclick="submitAllReassignments({{ coach.coach_id }})">Перенести все группы и удалить тренера</button>
+                                <button type="button" onclick="hideReassignForms({{ coach.coach_id }})">Отмена</button>
+                            </div>
+                            
+                            <form id="delete-form-{{ coach.coach_id }}" action="{{ url_for('delete_coach', coach_id=coach.coach_id) }}" method="POST" style="display: none;">
+                                <input type="hidden" name="_method" value="DELETE">
+                            </form>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Строки с группами тренера -->
+                    {% for group in coach.groups | sort(attribute='group_name') %}
+                    <tr>
+                        <td colspan="2">{{ group.group_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Раздел "Группы" -->
+    <div id="groups-section" class="content">
+        <div class="search-container">
+            <input type="text" id="searchGroupInput" placeholder="Поиск группы" oninput="searchGroup()">
+        </div>
+        <table>
+            <tbody>
+                {% for group in groups %}
+                <tr class="group-row">
+                    <td style="font-weight: bold;">{{ group.name }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <div class="tooltip">
+                                <button class="action-button" onclick="showEditGroupForm({{ group.id }})">✎</button>
+                                <span class="tooltiptext">Редактировать группу</span>
+                            </div>
+                            <div class="tooltip">
+                                <a class="action-button" href="{{ url_for('group_schedule', group_id=group.id) }}">📅</a>
+                                <span class="tooltiptext">Расписание группы</span>
+                            </div>
+                            <div class="tooltip">
+                                <a class="action-button" href="{{ url_for('group_attendance', group_id=group.id) }}">✔</a>
+                                <span class="tooltiptext">Посещаемость</span>
+                            </div>
+                            <div class="tooltip">
+                                <button class="action-button" onclick="confirmDeleteGroup({{ group.id }})">✖</button>
+                                <span class="tooltiptext">Удалить группу</span>
+                            </div>
+                        </div>
+
+                        <!-- Форма редактирования группы -->
+                        <div class="edit-form" id="edit-group-form-{{ group.id }}" style="display: none;">
+                            <form action="{{ url_for('edit_group', group_id=group.id) }}" method="POST">
+                                <input type="text" name="group_name" value="{{ group.name }}" placeholder="Название группы" required>
+                                <select name="coach_id" required>
+                                    <option value="">Выберите тренера</option>
+                                    {% for coach in coaches %}
+                                        <option value="{{ coach.coach_id }}" {% if group.coach_id == coach.coach_id %}selected{% endif %}>
+                                            {{ coach.coach_surname }} {{ coach.coach_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit">Сохранить</button>
+                                <button type="button" onclick="hideEditGroupForm({{ group.id }})">Отмена</button>
+                            </form>                            
+                        </div>
+
+                        <form id="delete-form-{{ group.id }}" action="{{ url_for('delete_group', group_id=group.id) }}" method="POST" style="display: none;">
+                            <input type="hidden" name="_method" value="DELETE">
+                        </form>
+                    </td>
+                </tr>
+                <tr class="group-details">
+                    <td colspan="2">
+                        <div class="coach-info">
+                            Тренер: {{ group.coach }}
+                        </div>
+                        
+                        <table>
+                            <thead>
+                            </thead>
+                            <tbody>
+                                {% for athlete in group.athletes %}
+                                <tr>
+                                    <td>{{ athlete[1] }} {{ athlete[2] }} {{ athlete[3] if athlete[3] else '' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

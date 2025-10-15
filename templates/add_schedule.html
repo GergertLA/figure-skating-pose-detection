@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Добавить занятие - NeuroSkate</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="header">
+        <nav>
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link">На главную</a>
+            <a href="{{ url_for('auth.logout') }}" class="logout-link">Выйти</a>
+        </nav>
+    </div>
+
+    <div class="content">
+        <h1>Добавить новое занятие</h1>
+        
+        <form method="POST" action="{{ url_for('add_schedule') }}">
+            <div class="form-group">
+                <label for="training_date">Дата:</label>
+                <input type="date" id="training_date" name="training_date" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="start_time">Время начала:</label>
+                <input type="time" id="start_time" name="start_time" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="end_time">Время окончания:</label>
+                <input type="time" id="end_time" name="end_time" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="training_type">Тип занятия:</label>
+                <select id="training_type" name="training_type" required onchange="toggleTrainingType()">
+                    <option value="group">Групповое</option>
+                    <option value="individual">Индивидуальное</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="location">Место:</label>
+                <select id="location" name="location" required>
+                    <option value="ice">Лёд</option>
+                    <option value="hall">Зал</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="coach_id">Тренер:</label>
+                <select id="coach_id" name="coach_id" required>
+                    {% for coach in coaches %}
+                        <option value="{{ coach[0] }}">{{ coach[1] }} {{ coach[2] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" id="group-field">
+                <label for="group_id">Группа:</label>
+                <select id="group_id" name="group_id">
+                    {% for group in groups %}
+                        <option value="{{ group[0] }}">{{ group[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" id="athlete-field" style="display: none;">
+                <label for="athlete_id">Спортсмен:</label>
+                <select id="athlete_id" name="athlete_id">
+                    {% for athlete in athletes %}
+                        <option value="{{ athlete[0] }}">{{ athlete[1] }} {{ athlete[2] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit">Добавить</button>
+            <button type="button" onclick="window.location.href='{{ url_for('view_schedule') }}'">Отмена</button>
+        </form>
+    </div>
+
+    <script>
+        function toggleTrainingType() {
+            const trainingType = document.getElementById('training_type').value;
+            if (trainingType === 'group') {
+                document.getElementById('group-field').style.display = 'block';
+                document.getElementById('athlete-field').style.display = 'none';
+            } else {
+                document.getElementById('group-field').style.display = 'none';
+                document.getElementById('athlete-field').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

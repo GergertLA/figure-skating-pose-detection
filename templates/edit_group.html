@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Редактирование группы</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #244A9A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #102D69;
+        }
+    </style>
+</head>
+<body>
+    <h1>Редактирование группы</h1>
+    <form method="POST">
+        <label for="group_name">Название группы:</label>
+        <input type="text" id="group_name" name="group_name" value="{{ group[0] }}" required>
+
+        <label for="coach_id">Тренер:</label>
+        <select id="coach_id" name="coach_id" required>
+            {% for coach in coaches %}
+                <option value="{{ coach[0] }}" {% if coach[0] == group[1] %}selected{% endif %}>{{ coach[1] }} {{ coach[2] }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Сохранить изменения</button>
+    </form>
+</body>
+</html>

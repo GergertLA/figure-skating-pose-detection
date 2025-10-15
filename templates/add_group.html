@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавление группы</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/add_group.css') }}">
+    <script src="{{ url_for('static', filename='js/add_group.js') }}" defer></script>
+</head>
+<body>
+    <div class="container">
+        <form method="POST" onsubmit="return validateForm()">
+            <label for="group_name">Название группы:</label>
+            <input type="text" id="group_name" name="group_name" required>
+
+            <label for="coach_id">Тренер:</label>
+            <select id="coach_id" name="coach_id" required>
+                {% for coach in coaches %}
+                <option value="{{ coach[0] }}">{{ coach[1] }} {{ coach[2] }}</option>
+                {% endfor %}
+            </select>
+            <a href="{{ url_for('add_coach') }}"><button type="button">Добавить нового тренера</button></a>
+
+            <div class="athlete-list">
+                <label>Спортсмены:</label>
+                <div id="athletes-container">
+                    {% for athlete in athletes %}
+                    <label>
+                        <input type="checkbox" name="athletes[]" value="{{ athlete[0] }}">
+                        {{ athlete[1] }} {{ athlete[2] }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <button type="button" onclick="addAthlete()">+ Добавить нового спортсмена</button>
+            </div>
+
+            <div id="error-message" class="error-message">
+                Невозможно добавить группу без спортсменов. Пожалуйста, добавьте хотя бы одного спортсмена.
+            </div>
+
+            <button type="submit">Добавить группу</button>
+        </form>
+
+        <form action="{{ url_for('index') }}" method="GET">
+            <button type="submit" class="back-button">Вернуться на главную</button>
+        </form>
+    </div>
+</body>
+</html>

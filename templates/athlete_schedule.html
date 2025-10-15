@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Недельное расписание</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <style>
+        :root {
+          --timeHeight: 100px; /* Высота одного часа (60 минут) */
+          --calBgColor: #f5f5f5;
+          --eventBorderColor: #e0e0e0;
+          --eventColor1: #d4edff;
+          --eventColor2: #ffe8d4;
+          --eventColor3: #d4f7e2;
+          --eventColor4: #f8d7da;
+          --timeMarkerColor: #e0e0e0;
+          --eventMargin: 2px;
+        }
+        .event[style*="display: none"] {
+            display: none !important;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 1800px;
+            min-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            min-width: 200px;
+        }
+
+        .week-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .week-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            grid-template-rows: auto repeat(13, var(--timeHeight));
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            max-height: calc(15 * var(--timeHeight)); /* 13 часов с 7:00 до 20:00 */
+            
+        }
+
+        .time-header {
+            grid-column: 1;
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+            position: sticky;
+            left: 0;
+            z-index: 3;
+        }
+
+        .day-header {
+            padding: 10px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 3;
+        }
+
+        .time-slot {
+            height: var(--timeHeight);
+            display: flex;
+            align-items: flex-start;
+            padding: 5px 10px;
+            border-right: 1px solid #ddd;
+            border-bottom: 1px solid var(--timeMarkerColor);
+            background-color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        .day-column {
+            position: relative;
+            border-right: 1px solid #ddd;
+        }
+
+        .day-column:last-child {
+            border-right: none;
+        }
+
+        .hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--timeMarkerColor);
+            z-index: 0;
+        }
+
+        .event {
+            position: absolute;
+            left: var(--eventMargin);
+            right: var(--eventMargin);
+            border: 1px solid var(--eventBorderColor);
+            border-radius: 5px;
+            padding: 8px;
+            background: white;
+            font-size: 0.9rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        .event:hover {
+            transform: scale(1.02);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .event.compact {
+            width: calc(50% - var(--eventMargin) * 2);
+        }
+
+        .event.compact:nth-child(odd) {
+            left: var(--eventMargin);
+        }
+
+        .event.compact:nth-child(even) {
+            left: calc(50% + var(--eventMargin));
+        }
+
+        .event-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .event-time {
+            color: #555;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+
+        .event-coach {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: auto;
+        }
+
+        /* Цвета для событий */
+        .group.ice {
+            /* background-color: var(--eventColor1); */
+            border-left: 4px solid #007bff;
+        }
+
+        .group.hall {
+            /* background-color: var(--eventColor2); */
+            border-left: 4px solid #fd7e14;
+        }
+
+        .individual.ice {
+            /* background-color: var(--eventColor3); */
+            border-left: 4px solid #28a745;
+        }
+
+        .individual.hall {
+            /* background-color: var(--eventColor4); */
+            border-left: 4px solid #dc3545;
+        }
+        .group {
+            /* background-color: var(--eventColor1); */
+            border-left: 4px solid #007bff;
+        }
+
+        .individual {
+            /* background-color: var(--eventColor3); */
+            border-left: 4px solid #28a745;
+        } 
+        /* Стили для подсказки */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 300px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .tooltip-content {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .event-location {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 3px;
+            font-style: italic;
+        }
+        .attendance-table {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .attendance-table thead th {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .form-switch .form-check-input {
+            cursor: pointer;
+        }
+
+        .form-select:disabled {
+            background-color: #e9ecef;
+            opacity: 1;
+            cursor: not-allowed;
+        }
+
+        .group-header {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+
+        .group-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #343a40;
+        }
+
+        .group-header p {
+            margin: 5px 0 0;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        /* Стили для уведомлений */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            min-width: 300px;
+            animation: slideIn 0.5s forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Расписание тренировок</h1>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Назад</a>
+            </div>
+        </div>
+        <!-- Заголовок с названием группы -->
+        {% if is_group_view %}
+        <div class="group-header">
+            <h2>Расписание группы: {{ group_name }}</h2>
+            <p>Тренер: {{ coach_name }}</p>
+        </div>
+        {% endif %}
+        <!-- Фильтры -->
+        <div class="filters">
+                       
+            <div class="filter-group">
+                <label for="location-filter" class="form-label">Место</label>
+                <select id="location-filter" class="form-select">
+                    <option value="">Все места</option>
+                    <option value="ice">Лед</option>
+                    <option value="hall">Зал</option> 
+                </select>
+            </div>
+        </div>
+        
+        <!-- Навигация по неделям -->
+        <div class="week-navigation">
+            <button class="nav-button btn btn-outline-secondary" id="prev-week">←</button>
+            <div class="week-title" id="week-range"></div>
+            <button class="nav-button btn btn-outline-secondary" id="next-week">→</button>
+        </div>
+        
+        <!-- Календарь -->
+        <div class="calendar-grid" id="calendar">
+            <!-- Временная шкала и дни будут добавлены через JavaScript -->
+        </div>
+        
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const templateDaysData = JSON.parse('{{ days | tojson | safe }}');
+        const is_group_view = {{ 'true' if is_group_view else 'false' }};
+        const group_id = {{ group_id if is_group_view else 'null' }};
+        const groupColors = {};
+        let groupColorIndex = 0;
+        const predefinedColors = [
+            '#FFB6C1', '#87CEFA', '#98FB98', '#FFD700', '#FFA07A', '#BA55D3', '#00CED1',
+            '#F08080', '#8FBC8F', '#DAA520', '#40E0D0', '#FF69B4', '#CD5C5C', '#7B68EE',
+            '#00FA9A', '#D2691E', '#00BFFF', '#FF8C00', '#DC143C', '#ADFF2F'
+        ];
+        fetch('/check-auth')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    window.location.href = '/auth/login';
+                }
+            });
+        const athleteGroups = JSON.parse('{{ athlete_groups_json | safe }}');
+        
+        // let selectedAthleteId = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем текущую дату
+            let currentDate = new Date();
+            
+            // Функция для обновления отображаемого диапазона недели
+            function updateWeekRange() {
+                const startOfWeek = new Date(currentDate);
+                startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + (currentDate.getDay() === 0 ? -6 : 1));
+                
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                
+                const options = { day: 'numeric', month: 'long' };
+                document.getElementById('week-range').textContent = 
+                    `${startOfWeek.toLocaleDateString('ru-RU', options)} - ${endOfWeek.toLocaleDateString('ru-RU', options)}`;
+                
+                return { start: startOfWeek, end: endOfWeek };
+            }
+                    
+            // Функция для получения короткого названия дня недели
+            function getShortDayName(date) {
+                const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                return days[date.getDay()];
+            }
+            
+            // Функция для создания структуры календаря
+            function createCalendarStructure(startDate, endDate) {
+                const calendar = document.getElementById('calendar');
+                calendar.innerHTML = '';
+                
+                // Добавляем заголовок временной шкалы
+                const timeHeader = document.createElement('div');
+                timeHeader.className = 'time-header day-header';
+                timeHeader.textContent = 'Время';
+                calendar.appendChild(timeHeader);
+                
+                // Добавляем заголовки дней недели
+                const currentDay = new Date(startDate);
+                let dayIndex = 0;
+                while (currentDay <= endDate) {
+                    const dayNum = currentDay.getDate();
+                    const dayName = getShortDayName(currentDay);
+                    
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'day-header';
+                    dayHeader.innerHTML = `
+                        <div class="date-num">${dayNum}</div>
+                        <div class="date-day">${dayName}</div>
+                    `;
+                    dayHeader.dataset.date = formatDate(currentDay);
+                    calendar.appendChild(dayHeader);
+                    
+                    currentDay.setDate(currentDay.getDate() + 1);
+                    dayIndex++;
+                }
+                
+                // Добавляем временные слоты и колонки дней
+                for (let hour = 7; hour <= 20; hour++) {
+                    // Временной слот
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = `${hour}:00`;
+                    calendar.appendChild(timeSlot);
+                    
+                    // Колонки дней
+                    const currentDay = new Date(startDate);
+                    for (let i = 0; i < 7; i++) {
+                        const dayColumn = document.createElement('div');
+                        dayColumn.className = 'day-column empty-cell';
+                        dayColumn.dataset.date = formatDate(currentDay);
+                        dayColumn.dataset.hour = hour;
+                        calendar.appendChild(dayColumn);
+                        
+                        // Добавляем линию часа
+                        const hourLine = document.createElement('div');
+                        hourLine.className = 'hour-line';
+                        hourLine.style.top = '0';
+                        dayColumn.appendChild(hourLine);
+                        
+                        currentDay.setDate(currentDay.getDate() + 1);
+                    }
+                }
+            }
+            
+            // Функция для загрузки данных недели
+            function loadWeekData(startDate, endDate) {
+                const startStr = formatDate(startDate);
+                const endStr = formatDate(endDate);
+                
+                // Показываем данные из шаблона сразу
+                if (templateDaysData && Object.keys(templateDaysData).length > 0) {
+                    renderWeek(templateDaysData);
+                }
+                
+                // Затем пытаемся загрузить свежие данные с сервера
+                fetch(`/schedule/week-data?start=${startStr}&end=${endStr}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.days && Object.keys(data.days).length > 0) {
+                            renderWeek(data.days);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching schedule:', error);
+                        // Если нет данных из шаблона, показываем сообщение
+                        if (!templateDaysData || Object.keys(templateDaysData).length === 0) {
+                            alert('Не удалось загрузить расписание');
+                        }
+                    });
+            }
+
+            
+            // Функция для расчета позиции события в пикселях
+            function calculateEventPosition(startTime, endTime) {
+                // Получаем значение --timeHeight из CSS
+                const timeHeight = parseInt(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--timeHeight').trim()) || 60; // 60 как значение по умолчанию
+
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+                const [endHour, endMinute] = endTime.split(':').map(Number);
+                
+                // Вычисляем начальную позицию (в пикселях от верха)
+                const startPosition = (startHour - 7) * timeHeight + 
+                                    (startMinute / 60) * timeHeight;
+                
+                // Вычисляем высоту события (в пикселях)
+                const durationMinutes = (endHour - startHour) * 60 + 
+                                    (endMinute - startMinute);
+                const height = (durationMinutes / 60) * timeHeight;
+                
+                return {
+                    top: startPosition,
+                    height: height
+                };
+            }
+            
+            // Функция для проверки пересечения событий
+            function hasOverlap(event1, event2) {
+                return event1.top < event2.top + event2.height && 
+                       event1.top + event1.height > event2.top;
+            }
+            
+            // Функция для преобразования значения места
+            function getLocationDisplayName(location) {
+                const locationNames = {
+                    'hall': 'Зал',
+                    'ice': 'Лед',
+                    'other': 'Другое'
+                };
+                return locationNames[location] || location;
+            }
+            
+            // Функция для получения значения для фильтрации
+            function getLocationFilterValue(location) {
+                const mapping = {
+                    'hall': 'зал',
+                    'ice': 'лед',
+                    'зал': 'зал', 
+                    'лед': 'лед'
+                };
+                return mapping[location] || location;
+            }
+            
+            function lightenColor(hex, percent) {
+                const num = parseInt(hex.slice(1), 16);
+                const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
+                const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
+                const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            // Функция для генерации цвета на основе строки (названия группы)
+            function getGroupColor(groupName, location) {
+                if (!groupName) return '#ccc';
+                if (!groupColors[groupName]) {
+                    groupColors[groupName] = predefinedColors[groupColorIndex % predefinedColors.length];
+                    groupColorIndex++;
+                }
+                const base = groupColors[groupName];
+                if (location === 'hall' || location === 'зал') return lightenColor(base, 0.5);  // осветлим на 50%
+                return base;
+            }
+            
+            // Функция для отрисовки событий
+            function renderWeek(daysData) {
+                // Сначала создаем структуру календаря
+                const weekRange = updateWeekRange();
+                createCalendarStructure(weekRange.start, weekRange.end);
+                
+                if (!daysData || Object.keys(daysData).length === 0) {
+                    console.log('Нет данных для отображения');
+                    return;
+                }
+
+                // Затем добавляем события
+                for (const [date, events] of Object.entries(daysData)) {
+                    // Находим соответствующий день
+                    const dayColumns = document.querySelectorAll(`.day-column[data-date="${date}"]`);
+                    if (dayColumns.length === 0) continue;
+                    
+                    const dayColumn = dayColumns[0];
+                    const existingEvents = [];
+                    
+                    for (const event of events) {
+                        const position = calculateEventPosition(event.start_time, event.end_time);
+                        const isGroup = event.type === 'group';
+                        
+                        const eventElement = document.createElement('div');
+                        eventElement.className = `event ${isGroup ? 'group' : 'individual'} ${event.location || ''}`;
+                        eventElement.style.top = `${position.top}px`;
+                        eventElement.style.height = `${position.height}px`;
+                        eventElement.dataset.id = event.id;
+                        eventElement.dataset.type = event.type;
+                        
+                        const color = getGroupColor(event.group || event.athlete || 'default', event.location);
+                        eventElement.style.backgroundColor = color;
+                        eventElement.style.borderLeft = `4px solid ${color}`;
+
+                        eventElement.innerHTML = `
+                            <div class="event-title">${isGroup ? event.group : event.athlete}</div>
+                            <div class="event-time">${event.start_time} - ${event.end_time}</div>
+                            <div class="event-location">${getLocationDisplayName(event.location)}</div>
+                            <div class="event-coach">Тренер: ${event.coach}</div>
+                        `;
+
+                        // Добавляем атрибуты для фильтрации
+                        eventElement.dataset.coach = event.coach ? event.coach.split(' ')[0] : '';
+                        eventElement.dataset.location = event.location.toLowerCase();
+                        eventElement.dataset.group = event.group || '';
+                        eventElement.dataset.athlete = event.athlete || '';
+                        
+                        // Для индивидуальных тренировок добавляем информацию о группе спортсмена
+                        if (event.type === 'individual' && event.athlete_id) {
+                                eventElement.dataset.athleteId = event.athlete_id;
+                            }
+                        if (event.type === 'group' && event.group_id) {
+                                eventElement.dataset.groupId = event.group_id;
+                            }
+
+                        // Проверяем пересечения с уже добавленными событиями
+                        let hasOverlapWithExisting = false;
+                        for (const existingEvent of existingEvents) {
+                            if (hasOverlap(position, existingEvent.position)) {
+                                hasOverlapWithExisting = true;
+                                break;
+                            }
+                        }
+                        
+                        if (hasOverlapWithExisting) {
+                            eventElement.classList.add('compact');
+                        }
+                        
+                        // Сохраняем информацию о событии для проверки пересечений
+                        existingEvents.push({
+                            element: eventElement,
+                            position: position
+                        });
+                        
+                        dayColumn.appendChild(eventElement);
+                    }
+                }
+                if (is_group_view) {
+                    document.getElementById('group-filter').value = "{{ group_name }}";
+                }
+                // Применяем фильтры после загрузки
+                applyFilters();
+            }
+            
+            // Функция для применения фильтров
+            function applyFilters() {
+                const locationFilter = document.getElementById('location-filter').value.toLowerCase();
+                
+                document.querySelectorAll('.event').forEach(event => {
+                    const eventLocation = (event.dataset.location || '').toLowerCase();
+                    
+                    // Нормализуем значения для сравнения
+                    const locationMap = {
+                        'лед': 'ice',
+                        'зал': 'hall'
+                    };
+                    const normalizedEventLocation = locationMap[eventLocation] || eventLocation;
+                    
+                    const showLocation = !locationFilter || normalizedEventLocation === locationFilter;
+                    
+                    const showEvent = (event.dataset.groupId == group_id || event.dataset.athlete_group_id == group_id) 
+                                    && showLocation;
+                    event.style.display = showEvent ? 'flex' : 'none';
+                });
+            }
+            
+            // Функция для форматирования даты в YYYY-MM-DD
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Обработчики кнопок навигации
+            document.getElementById('prev-week').addEventListener('click', function() {
+                currentDate.setDate(currentDate.getDate() - 7);
+                const weekRange = updateWeekRange();
+                loadWeekData(weekRange.start, weekRange.end);
+            });
+            
+            document.getElementById('next-week').addEventListener('click', function() {
+                currentDate.setDate(currentDate.getDate() + 7);
+                const weekRange = updateWeekRange();
+                loadWeekData(weekRange.start, weekRange.end);
+            });
+            
+            // Обработчики фильтров
+            document.getElementById('location-filter').addEventListener('change', applyFilters);
+            
+            // Инициализация
+            const weekRange = updateWeekRange();
+            loadWeekData(weekRange.start, weekRange.end);
+        });        
+    </script>
+</body>
+</html>

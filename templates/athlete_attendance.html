@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Посещаемость спортсмена</title>
+    <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css' rel='stylesheet'>
+    <style>
+        .attendance-container {
+            max-width: 100%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        .week-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .week-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 250px;
+            text-align: center;
+        }
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .attendance-table th {
+            background-color: #244A9A;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        .attendance-table th, .attendance-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .present {
+            color: green;
+            font-weight: bold;
+        }
+        .absent {
+            color: red;
+        }
+        .athlete-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .athlete-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #244A9A;
+            margin-right: 20px;
+        }
+        .logout-button {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 10px 20px;
+            background-color: #244A9A;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        .logout-button:hover {
+            background-color: #102D69;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="athlete-header">
+            <img src="{{ url_for('static', filename='athlete_photos/' + athlete_data[3]) if athlete_data[3] else url_for('static', filename='athlete_photos/default.jpg') }}" 
+                 class="athlete-photo">
+            <div>
+                <h2>{{ athlete_data[0] }} {{ athlete_data[1] }} {% if athlete_data[2] %}{{ athlete_data[2] }}{% endif %}</h2>
+                <p><strong>Группа:</strong> {{ athlete_data[4] }}</p>
+                <p><strong>Тренер:</strong> {{ athlete_data[5] }}</p>
+            </div>
+            <a href="{{ url_for('auth.logout') }}" class="logout-button">Выйти</a>
+        </div>
+
+        <div class="attendance-container">
+            <!-- <h1>Посещаемость спортсмена</h1> -->
+            
+            <div class="header">
+                <h1>Посещаемость спортсмена</h1>
+                <div>
+                    <a href="{{ url_for('athlete_dashboard') }}" class="btn btn-secondary mt-3">Назад</a>
+                </div>
+            </div>
+            <div class="week-navigation">
+                <a href="{{ url_for('athlete_attendance', athlete_id=athlete_id, week_start=prev_week.strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                    ←
+                </a>
+                <span class="week-title">
+                    Неделя {{ week_start.strftime('%d.%m.%Y') }} - {{ week_end.strftime('%d.%m.%Y') }}
+                </span>
+                <a href="{{ url_for('athlete_attendance', athlete_id=athlete_id, week_start=next_week.strftime('%Y-%m-%d')) }}" class="btn btn-outline-secondary">
+                    →
+                </a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="attendance-table table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>Место</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for training in trainings %}
+                        <tr>
+                            <td>{{ training[0].strftime('%d.%m.%Y') }}</td>
+                            <td>{{ training[1].strftime('%H:%M') }} - {{ training[2].strftime('%H:%M') }}</td>
+                            <td>
+                                {% if training[3] == 'hall' %}Зал
+                                {% elif training[3] == 'ice' %}Лёд
+                                {% else %}{{ training[3] }}{% endif %}
+                            </td>
+                            <td class="{% if training[4] %}present{% else %}absent{% endif %}">
+                                {% if training[4] %}✓ Присутствовал{% else %}✗ Отсутствовал{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="stats mt-4">
+                <h4>Статистика за неделю:</h4>
+                {% set attendance_percentage = (attended_count / trainings|length * 100) if trainings|length > 0 else 0 %}
+                <p>Посещено тренировок: {{ attended_count }}/{{ trainings|length }} ({{ "%.0f"|format(attendance_percentage) }}%)</p>
+            </div>
+            
+           
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

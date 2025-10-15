@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Переназначение групп</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="header">
+        <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Назад</a>
+        <a href="{{ url_for('auth.logout') }}" class="logout-link">Выйти</a>
+    </div>
+
+    <div class="reassign-container">
+        <h2>Переназначение групп тренера {{ coach[0] }} {{ coach[1] }} {{ coach[2] if coach[2] }}</h2>
+        
+        <div class="groups-list">
+            <h3>Группы для переназначения:</h3>
+            <ul>
+                {% for group in groups %}
+                <li>{{ group[1] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label for="new_coach_id">Новый тренер:</label>
+                <select name="new_coach_id" id="new_coach_id" required>
+                    <option value="">Выберите нового тренера</option>
+                    {% for coach in other_coaches %}
+                    <option value="{{ coach[0] }}">{{ coach[1] }} {{ coach[2] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="save-btn">Перенести все группы и удалить тренера</button>
+                <a href="{{ url_for('admin_dashboard') }}" class="cancel-btn">Отмена</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

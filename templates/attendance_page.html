@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Отметка посещаемости</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Отметка посещаемости</h1>
+            <a href="{{ url_for('week_schedule') }}" class="btn btn-secondary">Назад к расписанию</a>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Группа: {{ group_name }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">Дата: {{ training_date }}</h6>
+            </div>
+        </div>
+        
+        <form id="attendanceForm" method="POST" action="{{ url_for('save_attendance', session_id=session_id) }}">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Спортсмен</th>
+                            <th width="120">Присутствовал</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for athlete in athletes %}
+                        <tr>
+                            <td>{{ athlete.name }}</td>
+                            <td class="text-center">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input attendance-checkbox" 
+                                           type="checkbox" 
+                                           name="attendance_{{ athlete.id }}"
+                                           id="attendance_{{ athlete.id }}"
+                                           {% if athlete.attended %}checked{% endif %}>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const attendanceData = [];
+            
+            document.querySelectorAll('.attendance-checkbox').forEach(checkbox => {
+                const athleteId = checkbox.id.split('_')[1];
+                attendanceData.push({
+                    athlete_id: athleteId,
+                    attended: checkbox.checked
+                });
+            });
+            
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ attendance: attendanceData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Посещаемость сохранена');
+                    window.location.href = "{{ url_for('week_schedule') }}";
+                } else {
+                    alert('Ошибка при сохранении: ' + (data.message || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при отправке данных');
+            });
+        });
+    </script>
+</body>
+</html>
